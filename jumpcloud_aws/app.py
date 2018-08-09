@@ -177,7 +177,8 @@ def cli(email, password, region, otp):
 
     config = configparser.RawConfigParser()
     config.read(path_filename)
-    config.add_section('fundflow')
+    if not config.has_section('fundflow'):
+        config.add_section('fundflow')
     config.set('fundflow', 'output', CFG.get('outputformat'))
     config.set(
         'fundflow',
