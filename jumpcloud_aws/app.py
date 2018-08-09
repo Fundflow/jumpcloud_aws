@@ -23,7 +23,7 @@ regions = '\n'.join(
 )
 
 
-def saml_assertion(username, password):
+def saml_assertion(username, password, otp):
     # Initiate session handler
     session = requests.Session()
     url = CFG.get('url_sso_aws')
@@ -52,6 +52,9 @@ def saml_assertion(username, password):
         elif "pass" in name.lower():
             # Make an educated guess that this is the right field for the password
             payload[name] = password
+        elif "otp" in name.lower():
+            # Set mfa token
+            payload[name] = otp
         else:
             # Simply populate the parameter with the existing value
             # (picks up hidden fields
@@ -158,14 +161,15 @@ def saml_assertion(username, password):
 @click.command()
 @click.option('--email', prompt=True, help="Your email")
 @click.option('--password', prompt=True, hide_input=True, help="Your Password")
+@click.option('--otp', prompt=True, help="MFA token")
 @click.option(
     '--region',
     prompt=regions + "\nSelected Region",
     help="Selected a region:\n\n" + regions
 )
-def cli(email, password, region):
+def cli(email, password, region, otp):
 
-    token = saml_assertion(email, password)
+    token = saml_assertion(email, password, otp)
     path_filename = os.path.join(
         os.path.expanduser(CFG.get('path_file')),
         CFG.get('filename')
@@ -173,24 +177,25 @@ def cli(email, password, region):
 
     config = configparser.RawConfigParser()
     config.read(path_filename)
-    config.set(configparser.DEFAULTSECT, 'output', CFG.get('outputformat'))
+    config.add_section('fundflow')
+    config.set('fundflow', 'output', CFG.get('outputformat'))
     config.set(
-        configparser.DEFAULTSECT,
+        'fundflow',
         'region',
         CFG['regions'][int(region)]['id']
     )
     config.set(
-        configparser.DEFAULTSECT,
+        'fundflow',
         'aws_access_key_id',
         token['Credentials']['AccessKeyId']
     )
     config.set(
-        configparser.DEFAULTSECT,
+        'fundflow',
         'aws_secret_access_key',
         token['Credentials']['SecretAccessKey']
     )
     config.set(
-        configparser.DEFAULTSECT,
+        'fundflow',
         'aws_session_token',
         token['Credentials']['SessionToken']
     )
